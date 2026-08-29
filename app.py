@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+
 
 st.set_page_config(page_title="Heart Disease Prediction", page_icon="❤️")
 
