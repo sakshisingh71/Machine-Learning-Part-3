@@ -2,13 +2,20 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load saved model, scaler, and expected columns
-model = joblib.load("knn_heart_model.pkl")
-scaler = joblib.load("heart_scaler.pkl")
-expected_columns = joblib.load("heart_columns.pkl")
+st.set_page_config(page_title="Heart Disease Prediction", page_icon="❤️")
 
-st.title("Heart Stroke Prediction by akarsh")
-st.markdown("Provide the following details to check your heart stroke risk:")
+st.title("Heart Disease Prediction 💓")
+st.write("Created by Sakshi Singh")
+st.markdown("Provide the following details to check your heart disease risk:")
+
+# Load saved model, scaler, and expected columns
+try:
+    model = joblib.load("knn_heart_model.pkl")
+    scaler = joblib.load("heart_scaler.pkl")
+    expected_columns = joblib.load("heart_columns.pkl")
+except FileNotFoundError as e:
+    st.error(f"Required model file not found: {e}")
+    st.stop()
 
 # Collect user input
 age = st.slider("Age", 18, 100, 40)
@@ -26,7 +33,7 @@ st_slope = st.selectbox("ST Slope", ["Up", "Flat", "Down"])
 # When Predict is clicked
 if st.button("Predict"):
 
-    # Create a raw input dictionary
+    # Base numeric features
     raw_input = {
         'Age': age,
         'RestingBP': resting_bp,
@@ -34,28 +41,31 @@ if st.button("Predict"):
         'FastingBS': fasting_bs,
         'MaxHR': max_hr,
         'Oldpeak': oldpeak,
-        'Sex_' + sex: 1,
-        'ChestPainType_' + chest_pain: 1,
-        'RestingECG_' + resting_ecg: 1,
-        'ExerciseAngina_' + exercise_angina: 1,
-        'ST_Slope_' + st_slope: 1
     }
 
-    # Create input dataframe
-    input_df = pd.DataFrame([raw_input])
+    # One-hot-style categorical flags — only set the ones that exist
+    # in expected_columns; anything dropped during training (baseline
+    # category) is correctly left at 0.
+    categorical_flags = {
+        f'Sex_{sex}': 1,
+        f'ChestPainType_{chest_pain}': 1,
+        f'RestingECG_{resting_ecg}': 1,
+        f'ExerciseAngina_{exercise_angina}': 1,
+        f'ST_Slope_{st_slope}': 1,
+    }
+    raw_input.update(categorical_flags)
 
-    # Fill in missing columns with 0s
+    # Build input dataframe with all expected columns, defaulting to 0
+    input_df = pd.DataFrame([raw_input])
     for col in expected_columns:
         if col not in input_df.columns:
             input_df[col] = 0
 
-    # Reorder columns
+    # Keep only expected columns, in the correct order
     input_df = input_df[expected_columns]
 
-    # Scale the input
+    # Scale and predict
     scaled_input = scaler.transform(input_df)
-
-    # Make prediction
     prediction = model.predict(scaled_input)[0]
 
     # Show result
